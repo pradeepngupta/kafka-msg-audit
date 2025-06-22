@@ -9,5 +9,4 @@ public class KafkaMsgAuditApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(KafkaMsgAuditApplication.class, args);
 	}
-
 }
