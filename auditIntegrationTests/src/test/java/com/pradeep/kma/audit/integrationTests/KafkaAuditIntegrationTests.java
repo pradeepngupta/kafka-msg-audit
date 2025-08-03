@@ -1,16 +1,21 @@
 package com.pradeep.kma.audit.integrationTests;
 
+import com.pradeep.kma.audit.*;
 import com.pradeep.kma.audit.datamodel.MsgAudit;
 import com.pradeep.kma.audit.repository.MsgAuditRepository;
 import com.pradeep.kma.consumer.ConsumerMessages;
+import com.pradeep.kma.consumer.KafkaConsumerSimulator;
 import com.pradeep.kma.producer.KafkaProducerSimulator;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 
 import java.time.Duration;
@@ -30,13 +35,18 @@ import static org.junit.jupiter.api.Assertions.*;
         "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}"
 })
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@ImportAutoConfiguration(classes = {
+        KafkaAutoConfiguration.class
+})
+@ContextConfiguration(classes = { AuditConfiguration.class, SpringContextBridge.class,
+        KafkaProducerSimulator.class, ConsumerMessages.class, KafkaConsumerSimulator.class, AuditDataConfiguration.class, AuditTrackerListener.class, AuditHelper.class})
 @Slf4j
 class KafkaAuditIntegrationTests {
     private final KafkaProducerSimulator kafkaProducerSimulator;
 
     private final ConsumerMessages consumerMessages;
 
-    MsgAuditRepository repo;
+    private final MsgAuditRepository repo;
 
     @Autowired
     public KafkaAuditIntegrationTests(KafkaProducerSimulator kafkaProducerSimulator, ConsumerMessages consumerMessages, MsgAuditRepository repo) {

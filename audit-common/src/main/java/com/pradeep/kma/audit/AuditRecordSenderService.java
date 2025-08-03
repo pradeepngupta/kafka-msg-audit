@@ -1,8 +1,5 @@
 package com.pradeep.kma.audit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -22,17 +19,8 @@ public class AuditRecordSenderService {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    public void publishAuditRecordToKafka(AuditRecord auditRecord, String auditId) {
-        executor.execute(() -> {
-            ObjectWriter ow = new ObjectMapper().writer();
-            String json;
-            try {
-                json = ow.writeValueAsString(auditRecord);
-                kafkaTemplate.send("audit-interceptor-topic", auditId, json);
-            } catch (JsonProcessingException e) {
-                log.error("Error serializing audit record: {}", e.getMessage(), e);
-            }
-        }
+    public void publishAuditRecordToKafka(String json, String auditId) {
+        executor.execute(() -> kafkaTemplate.send("audit-interceptor-topic", auditId, json)
         );
     }
 

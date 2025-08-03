@@ -3,11 +3,12 @@ package com.pradeep.kma.interceptor;
 import com.pradeep.kma.audit.AuditRecord;
 import com.pradeep.kma.audit.AuditRecordSenderService;
 import com.pradeep.kma.audit.MessageStatus;
+import com.pradeep.kma.audit.SpringContextBridge;
+import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerInterceptor;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -15,7 +16,9 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.pradeep.kma.audit.Constants.*;
+import static com.pradeep.kma.audit.AuditUtils.getJson;
+import static com.pradeep.kma.audit.Constants.AUDIT_ID;
+import static com.pradeep.kma.audit.Constants.EXCLUDED_TOPICS;
 
 @Component
 @Slf4j
@@ -23,16 +26,20 @@ public class AuditProducerInterceptor implements ProducerInterceptor<String, Str
 
     private final AuditRecordSenderService auditRecordSenderService;
 
-    @Value("${spring.application.name: Default-Producer}")
-    private String appName;
+    private final String appName;
 
     private final ConcurrentHashMap<String, List<ProducerRecord<String, String>>> pendingAckRecords = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, List<RecordMetadata>> unverifiedAckRecords = new ConcurrentHashMap<>();
 
-    public AuditProducerInterceptor(AuditRecordSenderService auditRecordSenderService) {
-        this.auditRecordSenderService = auditRecordSenderService;
+    public AuditProducerInterceptor() {
+        try {
+            auditRecordSenderService = SpringContextBridge.getBean(AuditRecordSenderService.class);
+            appName = SpringContextBridge.getValue("spring.application.name", "Default-Producer");
+        } catch (Exception e) {
+            log.error("Failed to get AuditRecordSenderService bean: {}", e.getMessage(), e);
+            throw new RuntimeException("AuditRecordSenderService bean not found", e);
+        }
     }
-
 
     @Override
     public ProducerRecord<String, String> onSend(ProducerRecord<String, String> producerRecord) {
@@ -51,27 +58,31 @@ public class AuditProducerInterceptor implements ProducerInterceptor<String, Str
         if (producerRecords == null) {
             pendingAckRecords.put(producerRecord.topic(), List.of(producerRecord));
         } else {
-            producerRecords.add(producerRecord);
+            List<ProducerRecord<String, String>> newProducerRecords = new ArrayList<>(producerRecords);
+            newProducerRecords.add(producerRecord);
+            pendingAckRecords.put(producerRecord.topic(), newProducerRecords);
         }
-
-        auditRecordSenderService.publishAuditRecordToKafka(
-                new AuditRecord(
-                        auditId,
-                        producerRecord.topic(),
-                        null,
-                        0,
-                        MessageStatus.MESSAGE_SENT,
-                        producerRecord.key(),
-                        producerRecord.value(),
-                        Instant.now(),
-                        appName, null
-                ),
-                auditId
+        log.info("ProducerRecord key: {}, value: {}", producerRecord.key(), producerRecord.value());
+        AuditRecord auditRecord = new AuditRecord(
+                auditId,
+                producerRecord.topic(),
+                null,
+                0,
+                MessageStatus.MESSAGE_SENT,
+                producerRecord.key(),
+                null,
+                Instant.now(),
+                appName, null
         );
+        String json = getJson(auditRecord);
+        if (StringUtils.isNotBlank(json))
+            auditRecordSenderService.publishAuditRecordToKafka(
+                    json,
+                    auditId
+            );
 
         return producerRecord;
     }
-
 
     @Override
     public void onAcknowledgement(RecordMetadata metadata, Exception exception) {
@@ -94,24 +105,29 @@ public class AuditProducerInterceptor implements ProducerInterceptor<String, Str
                 if (recordMetadataList == null) {
                     unverifiedAckRecords.put(metadata.topic(), List.of(metadata));
                 } else {
-                    recordMetadataList.add(metadata);
+                    List<RecordMetadata> newRecordMetadataList = new ArrayList<>(recordMetadataList);
+                    newRecordMetadataList.add(metadata);
+                    unverifiedAckRecords.put(metadata.topic(), newRecordMetadataList);
                 }
             } else {
                 log.info("Single pending record found for topic: {}", metadata.topic());
-                auditRecordSenderService.publishAuditRecordToKafka(
-                        new AuditRecord(
-                                Arrays.toString(producerRecords.get(0).headers().lastHeader(AUDIT_ID).value()),
-                                metadata.topic(),
-                                String.valueOf(metadata.partition()),
-                                metadata.offset(),
-                                MessageStatus.MESSAGE_ACKNOWLEDGED,
-                                producerRecords.get(0).key(),
-                                producerRecords.get(0).value(),
-                                Instant.now(),
-                                appName, null
-                        ),
-                        Arrays.toString(producerRecords.get(0).headers().lastHeader(AUDIT_ID).value())
+                AuditRecord auditRecord = new AuditRecord(
+                        Arrays.toString(producerRecords.get(0).headers().lastHeader(AUDIT_ID).value()),
+                        metadata.topic(),
+                        String.valueOf(metadata.partition()),
+                        metadata.offset(),
+                        MessageStatus.MESSAGE_ACKNOWLEDGED,
+                        producerRecords.get(0).key(),
+                        producerRecords.get(0).value(),
+                        Instant.now(),
+                        appName, null
                 );
+                String json = getJson(auditRecord);
+                if (StringUtils.isNotBlank(json))
+                    auditRecordSenderService.publishAuditRecordToKafka(
+                            json,
+                            Arrays.toString(producerRecords.get(0).headers().lastHeader(AUDIT_ID).value())
+                    );
             }
         }
     }
@@ -120,8 +136,8 @@ public class AuditProducerInterceptor implements ProducerInterceptor<String, Str
     public void close() {
         auditRecordSenderService.close();
 
-        log.info("pendingAckRecords: {}", pendingAckRecords);
-        log.info("unverifiedAckRecords: {}", unverifiedAckRecords);
+        //log.info("pendingAckRecords: {}", pendingAckRecords);
+        //log.info("unverifiedAckRecords: {}", unverifiedAckRecords);
         // clean-up if required
         pendingAckRecords.clear();
         unverifiedAckRecords.clear();

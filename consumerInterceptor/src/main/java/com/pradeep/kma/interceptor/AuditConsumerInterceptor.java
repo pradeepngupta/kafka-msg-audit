@@ -3,19 +3,21 @@ package com.pradeep.kma.interceptor;
 import com.pradeep.kma.audit.AuditRecord;
 import com.pradeep.kma.audit.AuditRecordSenderService;
 import com.pradeep.kma.audit.MessageStatus;
+import com.pradeep.kma.audit.SpringContextBridge;
+import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerInterceptor;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.pradeep.kma.audit.AuditUtils.getJson;
 import static com.pradeep.kma.audit.Constants.AUDIT_ID;
 import static com.pradeep.kma.audit.Constants.EXCLUDED_TOPICS;
 
@@ -23,13 +25,18 @@ import static com.pradeep.kma.audit.Constants.EXCLUDED_TOPICS;
 @Slf4j
 public class AuditConsumerInterceptor implements ConsumerInterceptor<String, String> {
     private final AuditRecordSenderService auditRecordSenderService;
-    @Value("${spring.application.name: Default-Consumer}")
-    private String appName;
+    private final String appName;
 
     private final ConcurrentHashMap<String, ConsumerRecord<String, String>> pendingCommittedRecords = new ConcurrentHashMap<>();
 
-    public AuditConsumerInterceptor(AuditRecordSenderService auditRecordSenderService) {
-        this.auditRecordSenderService = auditRecordSenderService;
+    public AuditConsumerInterceptor() {
+        try {
+            auditRecordSenderService = SpringContextBridge.getBean(AuditRecordSenderService.class);
+            appName = SpringContextBridge.getValue("spring.application.name", "Default-Consumer");
+        } catch (Exception e) {
+            log.error("Failed to get AuditRecordSenderService bean: {}", e.getMessage(), e);
+            throw new RuntimeException("AuditRecordSenderService bean not found", e);
+        }
     }
 
 
@@ -45,21 +52,23 @@ public class AuditConsumerInterceptor implements ConsumerInterceptor<String, Str
                 pendingCommittedRecords.putIfAbsent(getKey(consumerRecord), consumerRecord);
                 String auditId = consumerRecord.headers().lastHeader(AUDIT_ID) != null ?
                         new String(consumerRecord.headers().lastHeader(AUDIT_ID).value()) : null;
-                auditRecordSenderService.publishAuditRecordToKafka(
-                        new AuditRecord(
-                                auditId,
-                                consumerRecord.topic(),
-                                String.valueOf(consumerRecord.partition()),
-                                consumerRecord.offset(),
-                                MessageStatus.MESSAGE_CONSUMED,
-                                consumerRecord.key(),
-                                consumerRecord.value(),
-                                Instant.now(),
-                                appName, null
-                        ),
-                        auditId
+                AuditRecord auditRecord = new AuditRecord(
+                        auditId,
+                        consumerRecord.topic(),
+                        String.valueOf(consumerRecord.partition()),
+                        consumerRecord.offset(),
+                        MessageStatus.MESSAGE_CONSUMED,
+                        consumerRecord.key(),
+                        consumerRecord.value(),
+                        Instant.now(),
+                        appName, null
                 );
-
+                String json = getJson(auditRecord);
+                if (StringUtils.isNotBlank(json))
+                    auditRecordSenderService.publishAuditRecordToKafka(
+                            json,
+                            auditId
+                    );
             }
         });
         return consumerRecords;
@@ -85,20 +94,24 @@ public class AuditConsumerInterceptor implements ConsumerInterceptor<String, Str
                         consumerRecord.topic(), consumerRecord.partition(), consumerRecord.offset());
                 String auditId = consumerRecord.headers().lastHeader(AUDIT_ID) != null ?
                         new String(consumerRecord.headers().lastHeader(AUDIT_ID).value()) : null;
-                auditRecordSenderService.publishAuditRecordToKafka(
-                        new AuditRecord(
-                                auditId,
-                                tp.topic(),
-                                String.valueOf(tp.partition()),
-                                om.offset(),
-                                MessageStatus.MESSAGE_PROCESSED,
-                                consumerRecord.key(),
-                                consumerRecord.value(),
-                                Instant.now(),
-                                appName, null
-                        ),
-                        auditId
+                AuditRecord auditRecord = new AuditRecord(
+                        auditId,
+                        tp.topic(),
+                        String.valueOf(tp.partition()),
+                        om.offset(),
+                        MessageStatus.MESSAGE_PROCESSED,
+                        consumerRecord.key(),
+                        consumerRecord.value(),
+                        Instant.now(),
+                        appName, null
                 );
+                String json = getJson(auditRecord);
+                if (StringUtils.isNotBlank(json))
+                    auditRecordSenderService.publishAuditRecordToKafka(
+                            json,
+                            auditId
+                    );
+
             } else {
                 log.warn("No pending committed record found for topic={}, partition={}, offset={}",
                         tp.topic(), tp.partition(), om.offset());
@@ -112,7 +125,7 @@ public class AuditConsumerInterceptor implements ConsumerInterceptor<String, Str
     public void close() {
         // This method is invoked when the interceptor is closed.
         log.info("Closing AuditConsumerInterceptor and clearing pending committed records.");
-        log.info("Pending committed records: {}", pendingCommittedRecords);
+        //log.info("Pending committed records: {}", pendingCommittedRecords);
         pendingCommittedRecords.clear();
         log.info("Pending committed records cleared.");
         auditRecordSenderService.close();

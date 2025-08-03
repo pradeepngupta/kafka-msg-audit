@@ -1,11 +1,17 @@
 package com.pradeep.kma.integrationTests;
 
+import com.pradeep.kma.audit.AuditConfiguration;
+import com.pradeep.kma.audit.SpringContextBridge;
 import com.pradeep.kma.consumer.ConsumerMessages;
+import com.pradeep.kma.consumer.KafkaConsumerSimulator;
 import com.pradeep.kma.producer.KafkaProducerSimulator;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 
 import java.util.ArrayList;
@@ -14,11 +20,16 @@ import java.util.concurrent.TimeUnit;
 
 import static org.awaitility.Awaitility.await;
 
-@EmbeddedKafka(partitions = 1, topics = {"demo-topic"})
+@EmbeddedKafka(partitions = 1, topics = {"demo-topic", "audit-interceptor-topic"})
 @SpringBootTest
 @TestPropertySource(properties = {
-    "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}"
+        "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}"
 })
+@ImportAutoConfiguration(classes = {
+        KafkaAutoConfiguration.class
+})
+@ContextConfiguration(classes = { AuditConfiguration.class, SpringContextBridge.class,
+        KafkaProducerSimulator.class, ConsumerMessages.class, KafkaConsumerSimulator.class })
 class KafkaIntegrationTest {
 
     private final KafkaProducerSimulator kafkaProducerSimulator;
@@ -36,10 +47,10 @@ class KafkaIntegrationTest {
         // 1. Send message
         String key = "test-key-1";
         String msg = "Test message 1";
-        kafkaProducerSimulator.send( key, msg);
+        kafkaProducerSimulator.send(key, msg);
 
         // 2. Give time for consumer and audit listener
-        await().atMost(500, TimeUnit.MILLISECONDS).until(()-> consumerMessages.messageReceived(msg));
+        await().atMost(500, TimeUnit.MILLISECONDS).until(() -> consumerMessages.messageReceived(msg));
     }
 
     @Test
@@ -47,16 +58,16 @@ class KafkaIntegrationTest {
         List<String> msgList = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
             // 1. Send message
-            String key = "test-key-"+i;
-            String msg = "Test message "+i;
-            kafkaProducerSimulator.send( key, msg);
+            String key = "test-key-" + i;
+            String msg = "Test message " + i;
+            kafkaProducerSimulator.send(key, msg);
             msgList.add(msg);
         }
 
         // 2. Give time for consumer and audit listener
 
-        for (String msg: msgList)
-            await().atMost(500, TimeUnit.MILLISECONDS).until(()->consumerMessages.messageReceived(msg));
+        for (String msg : msgList)
+            await().atMost(500, TimeUnit.MILLISECONDS).until(() -> consumerMessages.messageReceived(msg));
 
     }
 }

@@ -7,7 +7,7 @@ public class Constants {
         // Prevent instantiation
     }
 
-    public static final String INTERNAL_AUDIT_TOPIC = "internal-audit-topic";
+    public static final String INTERNAL_AUDIT_TOPIC = "audit-interceptor-topic";
 
     public static final Set<String> EXCLUDED_TOPICS = Set.of(INTERNAL_AUDIT_TOPIC);
     public static final String AUDIT_ID = "audit_id";
