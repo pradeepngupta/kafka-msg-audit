@@ -11,66 +11,18 @@
 	<groupId>com.pradeep</groupId>
 	<artifactId>kma</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>kafka-msg-audit</name>
+    <packaging>pom</packaging>
+    <name>kafka-msg-audit</name>
 	<description>Kafka message audit</description>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
-	<properties>
-		<java.version>17</java.version>
-	</properties>
-	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.kafka</groupId>
-			<artifactId>spring-kafka</artifactId>
-		</dependency>
 
-		<!-- Embedded Kafka for Testing -->
-		<dependency>
-			<groupId>org.springframework.kafka</groupId>
-			<artifactId>spring-kafka-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-    </dependencies>
-
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-		</plugins>
-	</build>
-
+    <modules>
+        <module>producer</module>
+		<module>consumer</module>
+		<module>integrationTests</module>
+		<module>audit</module>
+		<module>auditIntegrationTests</module>
+		<module>producerInterceptor</module>
+		<module>consumerInterceptor</module>
+		<module>audit-common</module>
+	</modules>
 </project>
