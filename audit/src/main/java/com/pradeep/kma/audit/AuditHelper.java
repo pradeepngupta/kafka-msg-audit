@@ -16,14 +16,14 @@ public class AuditHelper {
 
     public void updatePublishedAuditInfo(AuditRecord message) {
         log.info("Logging PublishedAudit for message with AuditId {} & key {}", message.auditId(), message.messageKey());
-
         MsgAudit audit = new MsgAudit();
         audit.setAuditId(message.auditId());
         audit.setMessageKey(message.messageKey());
         audit.setTopicName(message.topic());
-        audit.setPartition(Integer.parseInt(message.partition()));
+        if (message.partition() != null)
+            audit.setPartition(Integer.parseInt(message.partition()));
         audit.setOffset(message.offset());
-        audit.setTsPub(message.ts());
+        audit.setTsPub(message.date());
         audit.setPayload(message.payload()); // <-- store payload here
         audit.setStatus("PUB");
 
@@ -34,7 +34,9 @@ public class AuditHelper {
         log.info("Logging AcknowledgedAudit for message with AuditId {} & key {}", message.auditId(), message.messageKey());
 
         repo.findByAuditId(message.auditId()).ifPresent(audit -> {
-            audit.setTsAck(message.ts());
+            if (message.partition() != null)
+                audit.setPartition(Integer.parseInt(message.partition()));
+            audit.setTsAck(message.date());
             audit.setStatus("ACK");
             repo.save(audit);
         });
@@ -44,7 +46,7 @@ public class AuditHelper {
         log.info("Logging ConsumedAudit for message with AuditId {} & key {}", message.auditId(), message.messageKey());
 
         repo.findByAuditId(message.auditId()).ifPresent(audit -> {
-            audit.setTsCom(message.ts());
+            audit.setTsCom(message.date());
             audit.setStatus("COM");
             repo.save(audit);
         });
@@ -54,7 +56,7 @@ public class AuditHelper {
         log.info("Logging ProcessedAudit for message with AuditId {} & key {}", message.auditId(), message.messageKey());
 
         repo.findByAuditId(message.auditId()).ifPresent(audit -> {
-            audit.setTsPrc(message.ts());
+            audit.setTsPrc(message.date());
             audit.setStatus("PRC");
             repo.save(audit);
         });

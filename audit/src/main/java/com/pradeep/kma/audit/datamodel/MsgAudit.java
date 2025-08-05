@@ -8,7 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
-import java.time.Instant;
+import java.util.Date;
 
 @Entity
 @Setter
@@ -31,10 +31,10 @@ public class MsgAudit {
     @Column(name = "payload", columnDefinition = "CLOB") // or TEXT
     private String payload;
 
-    private Instant tsPub;
-    private Instant tsAck;
-    private Instant tsCom;
-    private Instant tsPrc;
+    private Date tsPub;
+    private Date tsAck;
+    private Date tsCom;
+    private Date tsPrc;
     private String status;
     private String consumerGroup;
 }

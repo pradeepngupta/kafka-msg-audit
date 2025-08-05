@@ -51,10 +51,8 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>com.pradeep</groupId>
-            <artifactId>audit-common</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
-            <scope>compile</scope>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
     </dependencies>
 

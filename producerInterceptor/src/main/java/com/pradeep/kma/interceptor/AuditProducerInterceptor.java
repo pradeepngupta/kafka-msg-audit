@@ -45,8 +45,9 @@ public class AuditProducerInterceptor implements ProducerInterceptor<String, Str
     public ProducerRecord<String, String> onSend(ProducerRecord<String, String> producerRecord) {
         // This method is invoked before the record is sent to Kafka.
         // You can modify the record here, for example, add a header or change the key/value.
-
+        log.info("✅ OnSend: {}", producerRecord);
         if (EXCLUDED_TOPICS.contains(producerRecord.topic())) {
+            log.info("Skipping audit for topic: {}", producerRecord.topic());
             return producerRecord; // Skip audit
         }
 
@@ -71,8 +72,8 @@ public class AuditProducerInterceptor implements ProducerInterceptor<String, Str
                 MessageStatus.MESSAGE_SENT,
                 producerRecord.key(),
                 null,
-                Instant.now(),
-                appName, null
+                new Date(),
+                appName
         );
         String json = getJson(auditRecord);
         if (StringUtils.isNotBlank(json))
@@ -119,8 +120,8 @@ public class AuditProducerInterceptor implements ProducerInterceptor<String, Str
                         MessageStatus.MESSAGE_ACKNOWLEDGED,
                         producerRecords.get(0).key(),
                         producerRecords.get(0).value(),
-                        Instant.now(),
-                        appName, null
+                        new Date(),
+                        appName
                 );
                 String json = getJson(auditRecord);
                 if (StringUtils.isNotBlank(json))
@@ -136,8 +137,8 @@ public class AuditProducerInterceptor implements ProducerInterceptor<String, Str
     public void close() {
         auditRecordSenderService.close();
 
-        //log.info("pendingAckRecords: {}", pendingAckRecords);
-        //log.info("unverifiedAckRecords: {}", unverifiedAckRecords);
+        log.info("pendingAckRecords: {}", pendingAckRecords);
+        log.info("unverifiedAckRecords: {}", unverifiedAckRecords);
         // clean-up if required
         pendingAckRecords.clear();
         unverifiedAckRecords.clear();

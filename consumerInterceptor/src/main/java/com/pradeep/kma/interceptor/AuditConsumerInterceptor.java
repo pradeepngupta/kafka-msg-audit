@@ -14,6 +14,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -60,8 +61,8 @@ public class AuditConsumerInterceptor implements ConsumerInterceptor<String, Str
                         MessageStatus.MESSAGE_CONSUMED,
                         consumerRecord.key(),
                         consumerRecord.value(),
-                        Instant.now(),
-                        appName, null
+                        new Date(),
+                        appName
                 );
                 String json = getJson(auditRecord);
                 if (StringUtils.isNotBlank(json))
@@ -102,8 +103,8 @@ public class AuditConsumerInterceptor implements ConsumerInterceptor<String, Str
                         MessageStatus.MESSAGE_PROCESSED,
                         consumerRecord.key(),
                         consumerRecord.value(),
-                        Instant.now(),
-                        appName, null
+                       new Date(),
+                        appName
                 );
                 String json = getJson(auditRecord);
                 if (StringUtils.isNotBlank(json))
@@ -125,7 +126,7 @@ public class AuditConsumerInterceptor implements ConsumerInterceptor<String, Str
     public void close() {
         // This method is invoked when the interceptor is closed.
         log.info("Closing AuditConsumerInterceptor and clearing pending committed records.");
-        //log.info("Pending committed records: {}", pendingCommittedRecords);
+        log.info("Pending committed records: {}", pendingCommittedRecords);
         pendingCommittedRecords.clear();
         log.info("Pending committed records cleared.");
         auditRecordSenderService.close();

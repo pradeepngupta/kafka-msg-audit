@@ -1,8 +1,6 @@
 package com.pradeep.kma.audit;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-
-import java.time.Instant;
+import java.util.Date;
 
 public record AuditRecord(
         String auditId,
@@ -12,10 +10,8 @@ public record AuditRecord(
         MessageStatus status,
         String messageKey,
         String payload,
-        @JsonSerialize(using = CustomDateSerializer.class)
-        Instant ts,
-        String producerApp,
-        String consumerGroup
+        Date date,
+        String producerApp
 ) {
 
 }

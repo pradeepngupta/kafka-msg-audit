@@ -9,6 +9,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static com.pradeep.kma.audit.Constants.INTERNAL_AUDIT_TOPIC;
+
 @Service
 @Slf4j
 public class AuditRecordSenderService {
@@ -20,7 +22,7 @@ public class AuditRecordSenderService {
     }
 
     public void publishAuditRecordToKafka(String json, String auditId) {
-        executor.execute(() -> kafkaTemplate.send("audit-interceptor-topic", auditId, json)
+        executor.execute(() -> kafkaTemplate.send(INTERNAL_AUDIT_TOPIC, auditId, json)
         );
     }
 

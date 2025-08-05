@@ -20,7 +20,6 @@
 		<module>consumer</module>
 		<module>integrationTests</module>
 		<module>audit</module>
-		<module>auditIntegrationTests</module>
 		<module>producerInterceptor</module>
 		<module>consumerInterceptor</module>
 		<module>audit-common</module>
