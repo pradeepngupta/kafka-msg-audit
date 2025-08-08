@@ -13,7 +13,6 @@ import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,6 +50,9 @@ public class AuditConsumerInterceptor implements ConsumerInterceptor<String, Str
             // Here you can add logic to send an audit message if needed
             if (!EXCLUDED_TOPICS.contains(consumerRecord.topic())) {
                 pendingCommittedRecords.putIfAbsent(getKey(consumerRecord), consumerRecord);
+                log.info("Pending committed record added: topic={}, partition={}, offset={}",
+                        consumerRecord.topic(), consumerRecord.partition(), consumerRecord.offset());
+                log.info("Pending committed records: {}", pendingCommittedRecords);
                 String auditId = consumerRecord.headers().lastHeader(AUDIT_ID) != null ?
                         new String(consumerRecord.headers().lastHeader(AUDIT_ID).value()) : null;
                 AuditRecord auditRecord = new AuditRecord(
@@ -88,8 +90,8 @@ public class AuditConsumerInterceptor implements ConsumerInterceptor<String, Str
         // This method is invoked when offsets are committed.
         // You can log the commit or perform additional actions if needed.
         offsets.forEach((tp, om) -> {
-            log.info("Committing offset: topic={}, partition={}, offset={}", tp.topic(), tp.partition(), om.offset());
-            ConsumerRecord<String, String> consumerRecord = pendingCommittedRecords.remove(getKey(tp.topic(), tp.partition(), om.offset()));
+            log.info("Committing offset: topic={}, partition={}, offset={}", tp.topic(), tp.partition(), om.offset()-1);
+            ConsumerRecord<String, String> consumerRecord = pendingCommittedRecords.remove(getKey(tp.topic(), tp.partition(), om.offset()-1));
             if (consumerRecord != null) {
                 log.info("Removing pending committed record: topic={}, partition={}, offset={}",
                         consumerRecord.topic(), consumerRecord.partition(), consumerRecord.offset());

@@ -1,9 +1,6 @@
 package com.pradeep.kma.audit.datamodel;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -15,10 +12,16 @@ import java.util.Date;
 @Getter
 @ToString
 public class MsgAudit {
+
+    @Version
+    private Long version;
+
     @Id
     @GeneratedValue
+    @Column(unique = true, nullable = false)
     private Long id;
 
+    @Column(unique = true, nullable = false)
     private String auditId; // Unique identifier for the audit record
 
     private String messageKey;

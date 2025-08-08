@@ -12,7 +12,6 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -113,7 +112,7 @@ public class AuditProducerInterceptor implements ProducerInterceptor<String, Str
             } else {
                 log.info("Single pending record found for topic: {}", metadata.topic());
                 AuditRecord auditRecord = new AuditRecord(
-                        Arrays.toString(producerRecords.get(0).headers().lastHeader(AUDIT_ID).value()),
+                        new String(producerRecords.get(0).headers().lastHeader(AUDIT_ID).value(), StandardCharsets.UTF_8),
                         metadata.topic(),
                         String.valueOf(metadata.partition()),
                         metadata.offset(),
