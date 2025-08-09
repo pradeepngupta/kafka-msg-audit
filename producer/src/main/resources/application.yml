@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: producer
+  kafka:
+    producer:
+      properties:
+        interceptor.classes: com.pradeep.kma.interceptor.AuditProducerInterceptor

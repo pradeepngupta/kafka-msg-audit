@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: consumer
+  kafka:
+    consumer:
+      properties:
+        interceptor.classes: com.pradeep.kma.interceptor.AuditConsumerInterceptor
