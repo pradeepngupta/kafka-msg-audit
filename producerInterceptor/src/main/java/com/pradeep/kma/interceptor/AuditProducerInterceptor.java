@@ -70,7 +70,7 @@ public class AuditProducerInterceptor implements ProducerInterceptor<String, Str
                 0,
                 MessageStatus.MESSAGE_SENT,
                 producerRecord.key(),
-                null,
+                producerRecord.value(),
                 new Date(),
                 appName
         );

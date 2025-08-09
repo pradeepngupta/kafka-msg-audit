@@ -58,6 +58,7 @@ public class AuditHelper {
                 MsgAudit mAudit = new MsgAudit();
                 mAudit.setAuditId(message.auditId());
                 mAudit.setMessageKey(message.messageKey());
+                mAudit.setPayload(message.payload());
                 mAudit.setTopicName(message.topic());
                 if (message.partition() != null)
                     mAudit.setPartition(Integer.parseInt(message.partition()));

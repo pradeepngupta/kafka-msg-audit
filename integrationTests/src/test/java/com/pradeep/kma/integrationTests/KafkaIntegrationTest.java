@@ -67,10 +67,10 @@ class KafkaIntegrationTest {
 
         // 2. Give time for consumer and audit listener
         await().atMost(500, TimeUnit.MILLISECONDS).until(() -> consumerMessages.messageReceived(msg));
-
-        await().atMost(1000, TimeUnit.MILLISECONDS).until(() -> repo.count() > 0);
         System.out.println("Audit count: " + repo.count());
         System.out.println("Audit records: " + repo.findAll());
+        await().atMost(1000, TimeUnit.MILLISECONDS).until(() -> repo.count() > 0);
+
         assertEquals(1, repo.count());
         testAudits(List.of(key));
     }
@@ -93,6 +93,8 @@ class KafkaIntegrationTest {
         for (String msg: msgList)
             await().atMost(500, TimeUnit.MILLISECONDS).until(()->consumerMessages.messageReceived(msg));
 
+        System.out.println("Audit Records count: " + repo.count());
+        System.out.println("Audit records: " + repo.findAll());
         await().atMost(1000, TimeUnit.MILLISECONDS).until(() -> repo.count() > 0);
         assertEquals(100, repo.count());
 
@@ -119,7 +121,7 @@ class KafkaIntegrationTest {
             assertEquals(keys.get(i), audit.getMessageKey());
             assertTrue(audit.getTopicName().length() > 1);
             assertEquals(0, audit.getPartition());
-//            assertEquals(i, audit.getOffset());
+            assertEquals(i, audit.getOffset());
             assertTrue(Instant.now().isAfter(audit.getTsPub().toInstant()));
             assertTrue(Instant.now().isAfter(audit.getTsPrc().toInstant()));
             assertEquals("PRC", audit.getStatus());
