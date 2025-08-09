@@ -39,5 +39,4 @@ public class MsgAudit {
     private Date tsCom;
     private Date tsPrc;
     private String status;
-    private String consumerGroup;
 }
